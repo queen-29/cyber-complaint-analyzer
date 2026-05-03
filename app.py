@@ -21,11 +21,18 @@ def extract_entities(text):
 def classify(text):
     text = text.lower()
 
-    if "otp" in text or "bank" in text:
+    # Basic Hinglish normalization
+    text = text.replace("paise", "money")
+    text = text.replace("kat gaye", "deducted")
+    text = text.replace("hack hogya", "hacked")
+    text = text.replace("mila", "received")
+    text = text.replace("fraud hua", "fraud")
+
+    if ("otp" in text or "bank" in text or "money" in text):
         return "Banking Fraud"
     elif "job" in text or "interview" in text:
         return "Fake Job Scam"
-    elif "instagram" in text or "facebook" in text:
+    elif "instagram" in text or "facebook" in text or "hacked" in text:
         return "Social Media Scam"
     elif "upi" in text or "payment" in text:
         return "UPI Fraud"
@@ -33,6 +40,7 @@ def classify(text):
         return "Phishing"
     else:
         return "Other"
+
 
 if st.button("Analyze Complaint"):
     if complaint:
