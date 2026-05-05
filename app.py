@@ -2,21 +2,11 @@ import streamlit as st
 import re
 import pandas as pd
 
-# -------- Page Config --------
-st.set_page_config(
-    page_title="Cyber Complaint Analyzer",
-    page_icon="🚔",
-    layout="wide"
-)
+st.set_page_config(page_title="Cyber Complaint Analyzer", layout="wide")
 
-# -------- Session Storage --------
+# -------- Session --------
 if "history" not in st.session_state:
     st.session_state.history = []
-
-# -------- Header --------
-st.markdown("<h1 style='text-align: center;'>🚔 Cyber Complaint Analysis System</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>AI-assisted tool for analyzing cybercrime complaints</p>", unsafe_allow_html=True)
-st.write("---")
 
 # -------- Functions --------
 def extract_entities(text):
@@ -38,13 +28,12 @@ def extract_entities(text):
 
 def classify(text):
     text = text.lower()
-
     categories = []
 
     if "otp" in text or "bank" in text or "money" in text:
-        categories.append("Banking Fraud")
+        categories.append("Banking")
 
-    if "job" in text or "interview" in text:
+    if "job" in text:
         categories.append("Job Scam")
 
     if "instagram" in text or "facebook" in text or "hacked" in text:
@@ -53,80 +42,72 @@ def classify(text):
     if "upi" in text or "payment" in text:
         categories.append("UPI Fraud")
 
-    if "link" in text or "http" in text or "www" in text:
+    if "http" in text or "www" in text or "link" in text:
         categories.append("Phishing")
 
     if not categories:
         categories.append("Other")
 
-    return categories
+    return list(set(categories))  # remove duplicates safely
 
+# -------- UI --------
+st.title("🚔 Cyber Complaint Analysis System")
+st.write("---")
 
-# -------- Layout --------
 col1, col2 = st.columns(2)
 
-# -------- LEFT: Input --------
+# -------- Input --------
 with col1:
-    st.subheader("📝 Enter Complaint")
-    complaint = st.text_area("Type complaint here", height=200)
-    analyze_btn = st.button("Analyze Complaint")
+    complaint = st.text_area("Enter Complaint", height=200)
+    analyze = st.button("Analyze")
 
     st.write("---")
-    st.subheader("📂 Bulk Upload")
-    uploaded_file = st.file_uploader("Upload CSV with 'complaint' column", type=["csv"])
+    uploaded_file = st.file_uploader("Upload CSV (column: complaint)", type=["csv"])
 
-# -------- RIGHT: Output --------
+# -------- Output --------
 with col2:
-    if analyze_btn:
-        if complaint:
-            category = classify(complaint)
-            entities = extract_entities(complaint)
+    if analyze and complaint:
+        category = classify(complaint)
+        entities = extract_entities(complaint)
 
-            st.session_state.history.append({
-                "entities": entities,
-                "category": category
-            })
+        st.session_state.history.append({
+            "category": category,
+            "entities": entities
+        })
 
-            st.subheader("📌 Category")
-            st.success(category)
+        st.subheader("Category")
+        st.success(", ".join(category))
 
-            st.subheader("🔍 Extracted Entities")
-            for key, value in entities.items():
-                st.write(f"**{key}:** {value}")
+        st.subheader("Extracted Entities")
+        for k, v in entities.items():
+            st.write(f"{k}: {v}")
 
-            # -------- Risk Analysis --------
-            st.subheader("⚠️ Risk Analysis")
+        # Risk Detection
+        st.subheader("Risk Analysis")
+        is_risk = False
 
-            is_high_risk = False
+        for key in ["Phone Numbers", "Emails", "UPI IDs"]:
+            current = entities[key]
+            past = []
 
-            for key in ["Phone Numbers", "Emails", "UPI IDs"]:
-                current_values = entities[key]
+            for item in st.session_state.history[:-1]:
+                past.extend(item["entities"][key])
 
-                all_values = []
-                for item in st.session_state.history[:-1]:
-                    all_values.extend(item["entities"][key])
+            for val in current:
+                if val in past:
+                    is_risk = True
+                    st.warning(f"{val} seen before")
 
-                for val in current_values:
-                    count = all_values.count(val)
-                    if count > 0:
-                        is_high_risk = True
-                        st.warning(f"{key[:-1]} {val} seen in {count} previous complaints")
-
-            if is_high_risk:
-                st.error("🚨 High Risk Complaint")
-            else:
-                st.success("No prior records found")
-
+        if is_risk:
+            st.error("High Risk Complaint")
         else:
-            st.warning("Please enter a complaint")
+            st.success("No repeat pattern found")
 
-# -------- BULK PROCESSING --------
+# -------- Bulk --------
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
     if "complaint" in df.columns:
-        st.success("File uploaded successfully")
-
         results = []
 
         for text in df["complaint"]:
@@ -134,95 +115,63 @@ if uploaded_file is not None:
             entities = extract_entities(str(text))
 
             st.session_state.history.append({
-                "entities": entities,
-                "category": category
+                "category": category,
+                "entities": entities
             })
 
             results.append({
                 "Complaint": text,
-                "Category": category,
+                "Category": ", ".join(category),
                 "Phones": entities["Phone Numbers"],
                 "Emails": entities["Emails"],
                 "URLs": entities["URLs"],
                 "UPIs": entities["UPI IDs"]
             })
 
-        st.subheader("📊 Bulk Analysis Results")
+        st.subheader("Bulk Results")
         st.dataframe(results)
 
-        # Download button
         csv = pd.DataFrame(results).to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download Results",
-            data=csv,
-            file_name='analysis_results.csv',
-            mime='text/csv'
-        )
+        st.download_button("Download Results", csv, "results.csv")
 
-    else:
-        st.error("CSV must contain 'complaint' column")
-
-# -------- DASHBOARD --------
-st.write("---")
-st.subheader("📊 System Overview")
-
-total_cases = len(st.session_state.history)
-st.write(f"Total Complaints: {total_cases}")
-
-# Most common entities
-all_phones, all_emails, all_upi = [], [], []
-
-for item in st.session_state.history:
-    all_phones.extend(item["entities"]["Phone Numbers"])
-    all_emails.extend(item["entities"]["Emails"])
-    all_upi.extend(item["entities"]["UPI IDs"])
-
-if all_phones:
-    st.write(f"📞 Most Reported Phone: {max(set(all_phones), key=all_phones.count)}")
-if all_emails:
-    st.write(f"📧 Most Reported Email: {max(set(all_emails), key=all_emails.count)}")
-if all_upi:
-    st.write(f"💳 Most Reported UPI: {max(set(all_upi), key=all_upi.count)}")
-
-# -------- Chart --------
+# -------- Dashboard --------
 st.write("---")
 st.markdown("## 📊 Analytics Dashboard")
 
-st.subheader("🧁 Crime Distribution")
+categories = []
 
-categories = [item["category"] for item in st.session_state.history]
+for item in st.session_state.history:
+    categories.extend(item["category"])
 
 if categories:
-    df_chart = pd.DataFrame(categories, columns=["Category"])
+    df_chart = pd.DataFrame({"Category": categories})
     chart_data = df_chart["Category"].value_counts()
 
     total = chart_data.sum()
 
-    for category, count in chart_data.items():
-        percentage = (count / total) * 100
+    st.subheader("Crime Distribution")
 
-        st.write(f"**{category}** — {count} cases ({percentage:.1f}%)")
+    for cat, count in chart_data.items():
+        percent = (count / total) * 100
+        st.write(f"**{cat}** — {count} ({percent:.1f}%)")
         st.progress(count / total)
 
-
-
-
-
-
-# -------- Risk Summary --------
-st.subheader("🚨 Risk Summary")
+# -------- Summary --------
+st.write("---")
 
 all_values = []
+
 for item in st.session_state.history:
     all_values.extend(item["entities"]["Phone Numbers"])
     all_values.extend(item["entities"]["Emails"])
     all_values.extend(item["entities"]["UPI IDs"])
 
-repeat_count = sum(1 for val in set(all_values) if all_values.count(val) > 1)
+repeat_count = sum(1 for v in set(all_values) if all_values.count(v) > 1)
 
+st.subheader("🚨 Risk Summary")
 st.write(f"Repeat Entities: {repeat_count}")
 
 if repeat_count > 0:
     st.error("Multiple repeat offenders detected")
 else:
-    st.success("No major repeat patterns")
+    st.success("No major patterns detected")
