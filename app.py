@@ -46,7 +46,6 @@ def classify(text):
 
 
 if st.button("Analyze Complaint"):
-    if st.button("Analyze Complaint"):
     if complaint:
         category = classify(complaint)
         entities = extract_entities(complaint)
