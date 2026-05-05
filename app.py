@@ -1,7 +1,6 @@
 import streamlit as st
 import re
 import pandas as pd
-import plotly.express as px
 
 
 # -------- Page Config --------
@@ -186,29 +185,23 @@ if all_upi:
 st.write("---")
 st.markdown("## 📊 Analytics Dashboard")
 
-st.subheader("📊 Crime Distribution")
+st.subheader("🧁 Crime Distribution")
 
 categories = [item["category"] for item in st.session_state.history]
 
 if categories:
     df_chart = pd.DataFrame(categories, columns=["Category"])
-    chart_data = df_chart["Category"].value_counts().reset_index()
-    chart_data.columns = ["Category", "Count"]
+    chart_data = df_chart["Category"].value_counts()
 
-    fig = px.bar(
-        chart_data,
-        x="Category",
-        y="Count",
-        text="Count"
-    )
+    total = chart_data.sum()
 
-    fig.update_layout(
-        xaxis_title="Crime Type",
-        yaxis_title="Number of Complaints",
-        title=None
-    )
+    for category, count in chart_data.items():
+        percentage = (count / total) * 100
 
-    st.plotly_chart(fig, use_container_width=True)
+        st.write(f"**{category}** — {count} cases ({percentage:.1f}%)")
+        st.progress(count / total)
+
+
 
 
 
