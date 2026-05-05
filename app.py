@@ -22,9 +22,12 @@ st.write("---")
 def extract_entities(text):
     phone = re.findall(r'\b\d{10}\b', text)
     email = re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', text)
-    url = re.findall(r'(https?://\S+)', text)
-    upi = re.findall(r'\b[\w.-]+@[\w.-]+\b', text)
+    
+    url = re.findall(r'(https?://[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,})', text)
+    url = [u.strip('.,') for u in url]
 
+    upi = re.findall(r'\b[\w.-]+@[\w.-]+\b', text)
+    
     # Remove emails from UPI
     upi = [u for u in upi if u not in email]
 
@@ -34,6 +37,7 @@ def extract_entities(text):
         "URLs": url,
         "UPI IDs": upi
     }
+
 
 def classify(text):
     text = text.lower()
@@ -53,7 +57,7 @@ def classify(text):
         return "Social Media Scam"
     elif "upi" in text or "payment" in text:
         return "UPI Fraud"
-    elif "link" in text or "http" in text:
+    elif "link" in text or "http/https" in text:
         return "Phishing"
     else:
         return "Other"
@@ -133,7 +137,8 @@ if uploaded_file is not None:
                 "Category": category,
                 "Phones": entities["Phone Numbers"],
                 "Emails": entities["Emails"],
-                "UPIs": entities["UPI IDs"]
+                "UPIs": entities["UPI IDs"],
+                "URLs": entities["URLs"]
             })
 
         st.subheader("📊 Bulk Analysis Results")
