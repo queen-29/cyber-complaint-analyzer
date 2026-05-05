@@ -1,5 +1,8 @@
 import streamlit as st
 import re
+# Store past data
+if "history" not in st.session_state:
+    st.session_state.history = []
 
 st.title("Cyber Complaint Analysis System")
 
@@ -43,9 +46,13 @@ def classify(text):
 
 
 if st.button("Analyze Complaint"):
+    if st.button("Analyze Complaint"):
     if complaint:
         category = classify(complaint)
         entities = extract_entities(complaint)
+
+        # Store complaint
+        st.session_state.history.append(entities)
 
         st.subheader("Category:")
         st.write(category)
@@ -53,5 +60,20 @@ if st.button("Analyze Complaint"):
         st.subheader("Extracted Entities:")
         for key, value in entities.items():
             st.write(f"{key}: {value}")
+
+        # 🔍 Repeat Detection
+        st.subheader("⚠️ Repeat Detection:")
+
+        for key in ["Phone Numbers", "Emails", "UPI IDs"]:
+            all_values = []
+
+            for item in st.session_state.history:
+                all_values.extend(item[key])
+
+            for val in set(all_values):
+                count = all_values.count(val)
+                if count > 1:
+                    st.warning(f"{key[:-1]} {val} found in {count} complaints")
     else:
         st.warning("Please enter a complaint")
+   
