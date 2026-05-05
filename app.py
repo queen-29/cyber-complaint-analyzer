@@ -1,7 +1,7 @@
 import streamlit as st
 import re
 import pandas as pd
-import matplotlib.pyplot as plt
+
 
 # -------- Page Config --------
 st.set_page_config(
@@ -191,9 +191,17 @@ if categories:
     for c in categories:
         counts[c] = counts.get(c, 0) + 1
 
-    fig, ax = plt.subplots()
-    ax.bar(counts.keys(), counts.values())
-    st.pyplot(fig)
+    st.subheader("📊 Crime Distribution")
+
+categories = [item["category"] for item in st.session_state.history]
+
+if categories:
+    df_chart = pd.DataFrame(categories, columns=["Category"])
+    chart_data = df_chart["Category"].value_counts()
+
+    st.bar_chart(chart_data)
+
+    
 
 # -------- Risk Summary --------
 st.subheader("🚨 Risk Summary")
