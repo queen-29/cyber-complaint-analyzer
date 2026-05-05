@@ -1,5 +1,6 @@
 import streamlit as st
 import re
+import pandas as pd
 
 # -------- Page Config --------
 st.set_page_config(
@@ -23,6 +24,9 @@ def extract_entities(text):
     email = re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', text)
     url = re.findall(r'(https?://\S+)', text)
     upi = re.findall(r'\b[\w.-]+@[\w.-]+\b', text)
+
+    # Remove emails from UPI
+    upi = [u for u in upi if u not in email]
 
     return {
         "Phone Numbers": phone,
@@ -57,20 +61,23 @@ def classify(text):
 # -------- Layout --------
 col1, col2 = st.columns(2)
 
-# -------- Left: Input --------
+# -------- LEFT: Input --------
 with col1:
     st.subheader("📝 Enter Complaint")
     complaint = st.text_area("Type complaint here", height=200)
     analyze_btn = st.button("Analyze Complaint")
 
-# -------- Right: Output --------
+    st.write("---")
+    st.subheader("📂 Bulk Upload")
+    uploaded_file = st.file_uploader("Upload CSV file with 'complaint' column", type=["csv"])
+
+# -------- RIGHT: Output --------
 with col2:
     if analyze_btn:
         if complaint:
             category = classify(complaint)
             entities = extract_entities(complaint)
 
-            # Store complaint
             st.session_state.history.append(entities)
 
             st.subheader("📌 Category")
@@ -106,7 +113,36 @@ with col2:
         else:
             st.warning("Please enter a complaint")
 
-# -------- Dashboard --------
+# -------- BULK PROCESSING --------
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+
+    if "complaint" in df.columns:
+        st.success("File uploaded successfully")
+
+        results = []
+
+        for text in df["complaint"]:
+            category = classify(str(text))
+            entities = extract_entities(str(text))
+
+            st.session_state.history.append(entities)
+
+            results.append({
+                "Complaint": text,
+                "Category": category,
+                "Phones": entities["Phone Numbers"],
+                "Emails": entities["Emails"],
+                "UPIs": entities["UPI IDs"]
+            })
+
+        st.subheader("📊 Bulk Analysis Results")
+        st.dataframe(results)
+
+    else:
+        st.error("CSV must contain a 'complaint' column")
+
+# -------- DASHBOARD --------
 st.write("---")
 st.subheader("📊 System Overview")
 
