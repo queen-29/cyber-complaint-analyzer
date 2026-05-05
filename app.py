@@ -40,24 +40,28 @@ def extract_entities(text):
 def classify(text):
     text = text.lower()
 
-    text = text.replace("paise", "money")
-    text = text.replace("kat gaye", "deducted")
-    text = text.replace("hack hogya", "hacked")
-    text = text.replace("mila", "received")
-    text = text.replace("fraud hua", "fraud")
+    categories = []
 
-    if ("otp" in text or "bank" in text or "money" in text):
-        return "Banking Fraud"
-    elif "job" in text or "interview" in text:
-        return "Fake Job Scam"
-    elif "instagram" in text or "facebook" in text or "hacked" in text:
-        return "Social Media Scam"
-    elif "upi" in text or "payment" in text:
-        return "UPI Fraud"
-    elif "link" in text or "http" in text:
-        return "Phishing"
-    else:
-        return "Other"
+    if "otp" in text or "bank" in text or "money" in text:
+        categories.append("Banking Fraud")
+
+    if "job" in text or "interview" in text:
+        categories.append("Job Scam")
+
+    if "instagram" in text or "facebook" in text or "hacked" in text:
+        categories.append("Social Scam")
+
+    if "upi" in text or "payment" in text:
+        categories.append("UPI Fraud")
+
+    if "link" in text or "http" in text or "www" in text:
+        categories.append("Phishing")
+
+    if not categories:
+        categories.append("Other")
+
+    return categories
+
 
 # -------- Layout --------
 col1, col2 = st.columns(2)
