@@ -1,6 +1,7 @@
 import streamlit as st
 import re
 import pandas as pd
+import plotly.express as px
 
 
 # -------- Page Config --------
@@ -191,9 +192,24 @@ categories = [item["category"] for item in st.session_state.history]
 
 if categories:
     df_chart = pd.DataFrame(categories, columns=["Category"])
-    chart_data = df_chart["Category"].value_counts()
+    chart_data = df_chart["Category"].value_counts().reset_index()
+    chart_data.columns = ["Category", "Count"]
 
-    st.bar_chart(chart_data)
+    fig = px.bar(
+        chart_data,
+        x="Category",
+        y="Count",
+        text="Count"
+    )
+
+    fig.update_layout(
+        xaxis_title="Crime Type",
+        yaxis_title="Number of Complaints",
+        title=None
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
 
 
 
