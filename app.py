@@ -182,16 +182,10 @@ if all_upi:
     st.write(f"💳 Most Reported UPI: {max(set(all_upi), key=all_upi.count)}")
 
 # -------- Chart --------
+st.write("---")
+st.markdown("## 📊 Analytics Dashboard")
+
 st.subheader("📊 Crime Distribution")
-
-categories = [item["category"] for item in st.session_state.history]
-
-if categories:
-    counts = {}
-    for c in categories:
-        counts[c] = counts.get(c, 0) + 1
-
-    st.subheader("📊 Crime Distribution")
 
 categories = [item["category"] for item in st.session_state.history]
 
@@ -201,7 +195,7 @@ if categories:
 
     st.bar_chart(chart_data)
 
-    
+
 
 # -------- Risk Summary --------
 st.subheader("🚨 Risk Summary")
