@@ -1,13 +1,23 @@
 import streamlit as st
 import re
-# Store past data
+
+# -------- Page Config --------
+st.set_page_config(
+    page_title="Cyber Complaint Analyzer",
+    page_icon="🚔",
+    layout="wide"
+)
+
+# -------- Session Storage --------
 if "history" not in st.session_state:
     st.session_state.history = []
 
-st.title("Cyber Complaint Analysis System")
+# -------- Header --------
+st.markdown("<h1 style='text-align: center;'>🚔 Cyber Complaint Analysis System</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>AI-assisted tool for analyzing cybercrime complaints</p>", unsafe_allow_html=True)
+st.write("---")
 
-complaint = st.text_area("Enter Cyber Complaint")
-
+# -------- Functions --------
 def extract_entities(text):
     phone = re.findall(r'\b\d{10}\b', text)
     email = re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', text)
@@ -24,7 +34,7 @@ def extract_entities(text):
 def classify(text):
     text = text.lower()
 
-    # Basic Hinglish normalization
+    # Hinglish normalization
     text = text.replace("paise", "money")
     text = text.replace("kat gaye", "deducted")
     text = text.replace("hack hogya", "hacked")
@@ -44,35 +54,69 @@ def classify(text):
     else:
         return "Other"
 
+# -------- Layout --------
+col1, col2 = st.columns(2)
 
-if st.button("Analyze Complaint"):
-    if complaint:
-        category = classify(complaint)
-        entities = extract_entities(complaint)
+# -------- Left: Input --------
+with col1:
+    st.subheader("📝 Enter Complaint")
+    complaint = st.text_area("Type complaint here", height=200)
+    analyze_btn = st.button("Analyze Complaint")
 
-        # Store complaint
-        st.session_state.history.append(entities)
+# -------- Right: Output --------
+with col2:
+    if analyze_btn:
+        if complaint:
+            category = classify(complaint)
+            entities = extract_entities(complaint)
 
-        st.subheader("Category:")
-        st.write(category)
+            # Store complaint
+            st.session_state.history.append(entities)
 
-        st.subheader("Extracted Entities:")
-        for key, value in entities.items():
-            st.write(f"{key}: {value}")
+            st.subheader("📌 Category")
+            st.success(category)
 
-        # 🔍 Repeat Detection
-        st.subheader("⚠️ Repeat Detection:")
+            st.subheader("🔍 Extracted Entities")
+            for key, value in entities.items():
+                st.write(f"**{key}:** {value}")
 
-        for key in ["Phone Numbers", "Emails", "UPI IDs"]:
-            all_values = []
+            # -------- Risk Analysis --------
+            st.subheader("⚠️ Risk Analysis")
 
-            for item in st.session_state.history:
-                all_values.extend(item[key])
+            is_high_risk = False
 
-            for val in set(all_values):
-                count = all_values.count(val)
-                if count > 1:
-                    st.warning(f"{key[:-1]} {val} found in {count} complaints")
-    else:
-        st.warning("Please enter a complaint")
-   
+            for key in ["Phone Numbers", "Emails", "UPI IDs"]:
+                current_values = entities[key]
+
+                all_values = []
+                for item in st.session_state.history[:-1]:
+                    all_values.extend(item[key])
+
+                for val in current_values:
+                    count = all_values.count(val)
+                    if count > 0:
+                        is_high_risk = True
+                        st.warning(f"{key[:-1]} {val} seen in {count} previous complaints")
+
+            if is_high_risk:
+                st.error("🚨 High Risk Complaint (linked to previous cases)")
+            else:
+                st.success("No prior records found")
+
+        else:
+            st.warning("Please enter a complaint")
+
+# -------- Dashboard --------
+st.write("---")
+st.subheader("📊 System Overview")
+
+total_cases = len(st.session_state.history)
+st.write(f"Total Complaints Analyzed: {total_cases}")
+
+all_phones = []
+for item in st.session_state.history:
+    all_phones.extend(item["Phone Numbers"])
+
+if all_phones:
+    most_common = max(set(all_phones), key=all_phones.count)
+    st.write(f"Most Reported Phone: {most_common}")
